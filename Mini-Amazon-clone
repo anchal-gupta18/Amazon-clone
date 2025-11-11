@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini Amazon Clone — Demo</title>
+  <style>
+    /* Basic reset */
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Inter, system-ui, Arial, sans-serif}
+    body{background:#f3f4f6;color:#111}
+    header{background:#0f172a;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand h1{font-size:18px}
+    .search{flex:1;margin:0 20px;display:flex;gap:8px}
+    .search input{flex:1;padding:8px 12px;border-radius:6px;border:1px solid #cbd5e1}
+    .btn{background:#f59e0b;color:#000;padding:8px 12px;border-radius:6px;border:none;cursor:pointer}
+    .container{max-width:1100px;margin:20px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}
+    .card{background:#fff;border-radius:10px;padding:12px;box-shadow:0 2px 8px rgba(2,6,23,0.06);display:flex;flex-direction:column;gap:8px}
+    .card img{width:100%;height:150px;object-fit:cover;border-radius:8px}
+    .card h3{font-size:15px}
+    .price{font-weight:700;color:#111}
+    .rating{font-size:13px;color:#6b7280}
+    .card .actions{margin-top:auto;display:flex;gap:8px;align-items:center}
+    .small{font-size:13px;padding:6px 8px}
+    /* Cart sidebar */
+    .cart-btn{position:relative}
+    .badge{position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:12px}
+    .cart-side{position:fixed;right:16px;top:72px;width:360px;max-width:90%;height:70vh;background:#fff;border-radius:10px;box-shadow:0 8px 30px rgba(2,6,23,0.12);padding:12px;overflow:auto;display:none;flex-direction:column;gap:10px;z-index:40}
+    .cart-side.open{display:flex}
+    .cart-item{display:flex;gap:10px;align-items:center;border-bottom:1px solid #eef2ff;padding-bottom:8px;margin-bottom:8px}
+    .cart-item img{width:64px;height:64px;object-fit:cover;border-radius:6px}
+    .qty{display:flex;gap:6px;align-items:center}
+    .muted{color:#6b7280;font-size:13px}
+    footer{margin:40px 0;text-align:center;color:#6b7280}
+    /* modal */
+    .modal-bg{position:fixed;inset:0;background:rgba(2,6,23,0.5);display:none;align-items:center;justify-content:center;z-index:50}
+    .modal-bg.open{display:flex}
+    .modal{background:#fff;padding:16px;border-radius:10px;max-width:720px;width:94%;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .modal img{width:100%;height:320px;object-fit:cover;border-radius:8px}
+    .modal .info{display:flex;flex-direction:column;gap:8px}
+    .empty{padding:24px;text-align:center;color:#6b7280}
+    @media(max-width:700px){
+      .modal{grid-template-columns:1fr}
+      .search{display:block}
+      .search input{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style="background:#f59e0b;border-radius:6px;padding:6px">
+        <path d="M3 7h18v10H3z" fill="#fff"></path>
+      </svg>
+      <h1>Mini Amazon Clone</h1>
+    </div>
+
+    <div class="search">
+      <input id="search" placeholder="Search products, e.g. headphones, shoes..." />
+      <button id="searchBtn" class="btn small">Search</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="cart-btn">
+        <button id="openCart" class="btn small">Cart 🛒</button>
+        <div id="cartCount" class="badge" style="display:none">0</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section>
+      <h2 style="margin:12px 0 16px">Products</h2>
+      <div id="productGrid" class="grid"></div>
+    </section>
+  </main>
+
+  <!-- Cart sidebar -->
+  <aside id="cartSide" class="cart-side" aria-hidden="true">
+    <h3>Cart</h3>
+    <div id="cartList"></div>
+    <div id="cartFooter" style="margin-top:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0">
+        <div class="muted">Total:</div>
+        <div id="cartTotal" style="font-weight:800">₹0</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="clearCart" class="btn small" style="background:#ef4444;color:#fff">Clear</button>
+        <button id="checkoutBtn" class="btn small">Checkout</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Modal for product detail -->
+  <div id="modalBg" class="modal-bg" role="dialog" aria-hidden="true">
+    <div class="modal" role="document">
+      <img id="modalImg" src="" alt="product image"/>
+      <div class="info">
+        <h3 id="modalTitle"></h3>
+        <div id="modalPrice" class="price"></div>
+        <div id="modalRating" class="rating"></div>
+        <p id="modalDesc" class="muted"></p>
+        <div style="display:flex;gap:8px;margin-top:auto">
+          <button id="modalAdd" class="btn small">Add to Cart</button>
+          <button id="modalClose" class="small" style="background:#e6e7eb">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Built for demo • Save to GitHub as <code>index.html</code> and open in browser.
+  </footer>
+
+  <script>
+    /* Sample product data */
+    const PRODUCTS = [
+      { id: 'p1', title: 'Wireless Headphones', price: 1499, rating: 4.4, img: 'https://picsum.photos/id/1060/600/400', desc: 'Comfortable wireless headphones with long battery life.' },
+      { id: 'p2', title: 'Running Shoes', price: 1999, rating: 4.2, img: 'https://picsum.photos/id/1011/600/400', desc: 'Lightweight running shoes for daily training.' },
+      { id: 'p3', title: 'Smart Watch', price: 2999, rating: 4.6, img: 'https://picsum.photos/id/1005/600/400', desc: 'Fitness tracking, notifications and long battery.' },
+      { id: 'p4', title: 'Backpack 25L', price: 899, rating: 4.1, img: 'https://picsum.photos/id/1057/600/400', desc: 'Durable backpack with laptop sleeve.' },
+      { id: 'p5', title: 'Bluetooth Speaker', price: 1299, rating: 4.3, img: 'https://picsum.photos/id/1082/600/400', desc: 'Portable speaker, deep bass and waterproof.' },
+      { id: 'p6', title: 'Sunglasses', price: 499, rating: 4.0, img: 'https://picsum.photos/id/1012/600/400', desc: 'UV protected trendy sunglasses.' }
+    ];
+
+    /* State */
+    let cart = {}; // { productId: qty }
+
+    /* DOM */
+    const productGrid = document.getElementById('productGrid');
+    const searchInput = document.getElementById('search');
+    const searchBtn = document.getElementById('searchBtn');
+    const cartSide = document.getElementById('cartSide');
+    const openCart = document.getElementById('openCart');
+    const cartList = document.getElementById('cartList');
+    const cartCount = document.getElementById('cartCount');
+    const cartTotal = document.getElementById('cartTotal');
+    const clearCart = document.getElementById('clearCart');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+
+    const modalBg = document.getElementById('modalBg');
+    const modalImg = document.getElementById('modalImg');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalPrice = document.getElementById('modalPrice');
+    const modalRating = document.getElementById('modalRating');
+    const modalDesc = document.getElementById('modalDesc');
+    const modalAdd = document.getElementById('modalAdd');
+    const modalClose = document.getElementById('modalClose');
+
+    let currentModalProduct = null;
+
+    /* Helpers */
+    function formatRupee(n){ return '₹' + n.toLocaleString('en-IN'); }
+
+    function saveCart(){
+      localStorage.setItem('mini_amazon_cart_v1', JSON.stringify(cart));
+    }
+    function loadCart(){
+      const x = localStorage.getItem('mini_amazon_cart_v1');
+      if(x) cart = JSON.parse(x);
+      else cart = {};
+    }
+
+    function updateCartUI(){
+      const ids = Object.keys(cart);
+      const totalQty = ids.reduce((s,id)=> s + cart[id], 0);
+      if(totalQty>0){
+        cartCount.style.display = 'flex';
+        cartCount.textContent = totalQty;
+      } else cartCount.style.display = 'none';
+
+      // Render items
+      cartList.innerHTML = '';
+      let total = 0;
+      if(ids.length === 0){
+        cartList.innerHTML = '<div class="empty">Cart is empty — add some products.</div>';
+      } else {
+        ids.forEach(id=>{
+          const p = PRODUCTS.find(x => x.id === id);
+          const qty = cart[id];
+          total += p.price * qty;
+          const div = document.createElement('div');
+          div.className = 'cart-item';
+          div.innerHTML = `
+            <img src="${p.img}" alt="${p.title}">
+            <div style="flex:1">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div><strong>${p.title}</strong></div>
+                <div class="muted">${formatRupee(p.price)}</div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+                <div class="qty">
+                  <button data-id="${id}" class="dec small">-</button>
+                  <div style="padding:6px 10px;border:1px solid #eee;border-radius:6px">${qty}</div>
+                  <button data-id="${id}" class="inc small">+</button>
+                </div>
+                <button data-id="${id}" class="small" style="background:#fee2e2;color:#b91c1c;border:none">Remove</button>
+              </div>
+            </div>
+          `;
+          cartList.appendChild(div);
+        });
+      }
+      cartTotal.textContent = formatRupee(total);
+
+      // attach listeners
+      [...cartList.querySelectorAll('.inc')].forEach(b => b.addEventListener('click', e=>{
+        const id = e.target.dataset.id; cart[id] = (cart[id]||0)+1; saveCart(); updateCartUI();
+      }));
+      [...cartList.querySelectorAll('.dec')].forEach(b => b.addEventListener('click', e=>{
+        const id = e.target.dataset.id; if(!cart[id]) return;
+        cart[id]--; if(cart[id] <= 0) delete cart[id]; saveCart(); updateCartUI();
+      }));
+      [...cartList.querySelectorAll('button[data-id].small')].forEach(b => b.addEventListener('click', e=>{
+        const id = e.target.dataset.id; delete cart[id]; saveCart(); updateCartUI();
+      }));
+    }
+
+    /* Render products */
+    function renderProducts(list){
+      productGrid.innerHTML = '';
+      list.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${p.img}" alt="${p.title}">
+          <h3>${p.title}</h3>
+          <div class="rating">⭐ ${p.rating} • <span class="muted">In stock</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="price">${formatRupee(p.price)}</div>
+            <div class="actions">
+              <button class="small" data-id="${p.id}" onclick="openModal('${p.id}')">View</button>
+              <button class="small" data-id="${p.id}" onclick="addToCart('${p.id}')">Add</button>
+            </div>
+          </div>
+        `;
+        productGrid.appendChild(card);
+      });
+    }
+
+    /* Search */
+    function doSearch(){
+      const q = searchInput.value.trim().toLowerCase();
+      if(!q) renderProducts(PRODUCTS);
+      else {
+        const filtered = PRODUCTS.filter(p => (p.title + ' ' + p.desc).toLowerCase().includes(q));
+        renderProducts(filtered);
+      }
+    }
+
+    /* Cart actions */
+    function addToCart(id){
+      cart[id] = (cart[id] || 0) + 1;
+      saveCart(); updateCartUI();
+      // show sidebar
+      cartSide.classList.add('open');
+    }
+
+    function clearCartFn(){
+      cart = {};
+      saveCart(); updateCartUI();
+    }
+
+    /* Modal */
+    function openModal(id){
+      const p = PRODUCTS.find(x=>x.id===id);
+      if(!p) return;
+      currentModalProduct = p;
+      modalImg.src = p.img;
+      modalTitle.textContent = p.title;
+      modalPrice.textContent = formatRupee(p.price);
+      modalRating.textContent = '⭐ ' + p.rating;
+      modalDesc.textContent = p.desc;
+      modalBg.classList.add('open');
+      modalBg.setAttribute('aria-hidden', 'false');
+    }
+
+    /* Close modal */
+    function closeModal(){
+      modalBg.classList.remove('open');
+      modalBg.setAttribute('aria-hidden', 'true');
+      currentModalProduct = null;
+    }
+
+    /* Checkout */
+    function doCheckout(){
+      const ids = Object.keys(cart);
+      if(ids.length === 0){
+        alert('Cart empty — kuch add karo pehle.');
+        return;
+      }
+      let summary = 'Order Summary:\\n\\n';
+      let total = 0;
+      ids.forEach(id=>{
+        const p = PRODUCTS.find(x=>x.id===id);
+        const qty = cart[id];
+        const line = `${p.title} x ${qty} = ₹${p.price * qty}\\n`;
+        summary += line;
+        total += p.price * qty;
+      });
+      summary += `\\nTotal: ₹${total}\\n\\nThis is a demo checkout.`;
+      alert(summary);
+      // After checkout clear cart
+      clearCartFn();
+      cartSide.classList.remove('open');
+    }
+
+    /* Attach events */
+    searchBtn.addEventListener('click', doSearch);
+    searchInput.addEventListener('keyup', e => { if(e.key === 'Enter') doSearch(); });
+    openCart.addEventListener('click', ()=> cartSide.classList.toggle('open'));
+    clearCart.addEventListener('click', clearCartFn);
+    checkoutBtn.addEventListener('click', doCheckout);
+
+    modalClose.addEventListener('click', closeModal);
+    modalBg.addEventListener('click', (e)=>{ if(e.target === modalBg) closeModal(); });
+    modalAdd.addEventListener('click', ()=>{ if(currentModalProduct){ addToCart(currentModalProduct.id); closeModal(); } });
+
+    /* Expose for inline onclick */
+    window.addToCart = addToCart;
+    window.openModal = openModal;
+
+    /* Init */
+    loadCart();
+    renderProducts(PRODUCTS);
+    updateCartUI();
+  </script>
+</body>
+</html>
